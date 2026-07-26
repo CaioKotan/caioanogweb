@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>caionog</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Bungee&family=JetBrains+Mono:wght@400;700;800&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Rubik+Glitch&family=Space+Grotesk:wght@400;700&family=Noto+Sans+JP:wght@900&family=Press+Start+2P&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <div class="scrollbar top">
+    <div class="scroll-track font-bebas" id="track-top">
+      <span>✦ sorosat</span><span class="dim">✦</span><span>✦ Esp32perceptron</span><span class="dim">✦</span>
+      <span>✦ biomDoor</span><span class="dim">✦</span><span>✦ sorosat</span><span class="dim">✦</span>
+      <span>✦ Esp32perceptron</span><span class="dim">✦</span><span>✦ biomDoor</span><span class="dim">✦</span>
+      <span>✦ sorosat</span><span class="dim">✦</span><span>✦ Esp32perceptron</span><span class="dim">✦</span>
+      <span>✦ biomDoor</span><span class="dim">✦</span>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <header>
+      <div class="badge">✦ @caiokotan</div>
+      <h1 class="glitchy"><span>CAIO A.</span><br><span>NOGUEIRA</span></h1>
+      <p class="tagline">programador · designer 3D · técnico em automação industrial</p>
+    </header>
+    <section>
+      <h2>⸺ SOBRE</h2>
+      <div class="about-grid">
+        <div><div class="big-num">01</div><p><span class="highlight">Desenvolvedor de sistemas embarcados</span> com foco em Arduino/Esp32/Raspberry PI, proficiente em linguagem C.</p></div>
+        <div><div class="big-num">02</div><p>Entusiasta de <span class="highlight">modelagem e impressão 3D</span>, atuo desde o desenvolvimento de peças até a manutenção de impressoras.</p></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- SOROSAT -->
+  <div class="full-section projeto projeto-sorosat">
+    <div class="projeto-header">
+      <span class="projeto-num">// SYS.01</span>
+      <h3 class="projeto-nome">SOROSAT</h3>
+      <span class="projeto-ano">2025</span>
+    </div>
+    <p class="projeto-desc"><span class="hl">Satélite experimental de baixo custo</span> baseado em ESP32 com transmissão LoRa. Coleta dados de temperatura, pressão e radiação UV em altitude.</p>
+    <h2 style="color:var(--proj-sorosat-telemetry);border-bottom-color:var(--proj-sorosat-tag-border);">⸺ MODELO 3D</h2>
+    <div id="viewer-3d"></div>
+    <p class="hint" style="color:var(--proj-sorosat-telemetry);">🖱 ARRASTE PRA GIRAR</p>
+    <button class="toggle-btn" id="toggle-sorosat">🔧 EXPLODIR</button>
+    <div class="telemetry">
+      <div>ALTITUDE MÁX<div><strong>12.400 m</strong></div></div>
+      <div>DOWNLINK<div><strong>433 MHz LoRa</strong></div></div>
+      <div>TAXA DE DADOS<div><strong>1.2 kbps</strong></div></div>
+      <div>MASSA TOTAL<div><strong>247 g</strong></div></div>
+    </div>
+    <div class="projeto-tags"><span>ESP32</span><span>LoRa</span><span>CubeSat</span><span>PETG</span><span>C</span></div>
+  </div>
+
+  <!-- ESP32 -->
+   <!--
+  <div class="full-section projeto projeto-esp32">
+    <div class="projeto-header">
+      <span class="projeto-num">// SYS.02</span>
+      <h3 class="projeto-nome">ESP32PERCEPTRON.H</h3>
+      <span class="projeto-ano">2024</span>
+    </div>
+    <p class="projeto-desc"><span class="hl">Biblioteca header-only em C</span> que implementa um perceptron multicamadas rodando diretamente no ESP32. Zero dependências externas.</p>
+    <h2 style="color:var(--proj-esp32-terminal);border-bottom-color:var(--proj-esp32-tag-border);">⸺ MODELO 3D</h2>
+    <div id="viewer-esp32"></div>
+    <p class="hint-esp32">🖱 GIRE A PEÇA</p>
+    <div class="telemetry">
+      <div>ACURÁCIA<div><strong>96.7%</strong></div></div>
+      <div>AMOSTRAS<div><strong>342</strong></div></div>
+      <div>PESOS<div><strong>1.280</strong></div></div>
+      <div>RAM USADA<div><strong>11.4 KB</strong></div></div>
+    </div>
+    <div class="projeto-tags"><span>C</span><span>ESP32</span><span>ML Embarcado</span><span>Header-only</span><span>Perceptron</span></div>
+  </div>
+-->
+  <!-- BIOMDOOR -->
+  <div class="full-section projeto projeto-biom">
+    <div class="badge-access">█ ACCESS GRANTED</div>
+    <div class="projeto-header">
+      <span class="projeto-num">// SYS.03</span>
+      <h3 class="projeto-nome">BIOMDOOR</h3>
+      <span class="projeto-ano">2024</span>
+    </div>
+    <p class="projeto-desc"><span class="hl">Fechadura biométrica inteligente</span> com leitor de impressão digital e acesso via RFID. Controlada por Raspberry PI Pico.</p>
+    <div class="telemetry">
+      <div>MODO<div><strong>Standalone</strong></div></div>
+      <div>BIO CADASTROS<div><strong>128</strong></div></div>
+      <div class="status">STATUS<div><strong>█ OPERATIONAL</strong></div></div>
+    </div>
+    <div class="projeto-tags"><span>RP2040</span><span>Biometria</span><span>RFID</span><span>OLED</span><span>PCB</span></div>
+  </div>
+
+  <div class="wrap">
+    <section id="skills-section">
+      <h2>⸺ HABILIDADES</h2>
+      <div class="skills-grid">
+        <span class="skill">C</span><span class="skill">C++</span><span class="skill">Python</span>
+        <span class="skill">JavaScript</span><span class="skill">HTML/CSS</span><span class="skill">ESP32</span>
+        <span class="skill">Arduino</span><span class="skill">STM32</span><span class="skill">KiCad</span>
+        <span class="skill">Fusion 360</span><span class="skill">Impressão 3D</span><span class="skill">LoRa</span>
+      </div>
+    </section>
+    <section>
+      <h2>⸺ CONTATO</h2>
+      <div class="contato-links"><a href="#">EMAIL</a><a href="#">LINKEDIN</a><a href="#">GITHUB</a></div>
+    </section>
+    <footer><span>© 2026 Caio A. Nog</span><span>eletrônica · programação · mecânica</span></footer>
+  </div>
+
+  <div class="scrollbar bottom">
+    <div class="scroll-track font-bebas" id="track-bottom">
+      <span>✦ sorosat</span><span class="dim">✦</span><span>✦ Esp32perceptron</span><span class="dim">✦</span>
+      <span>✦ biomDoor</span><span class="dim">✦</span><span>✦ sorosat</span><span class="dim">✦</span>
+      <span>✦ Esp32perceptron</span><span class="dim">✦</span><span>✦ biomDoor</span><span class="dim">✦</span>
+      <span>✦ sorosat</span><span class="dim">✦</span><span>✦ Esp32perceptron</span><span class="dim">✦</span>
+      <span>✦ biomDoor</span><span class="dim">✦</span>
+    </div>
+  </div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module" src="script.js"></script>
+</body>
+</html>
