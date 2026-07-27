@@ -69,7 +69,10 @@ h2 { font-family:'JetBrains Mono',monospace; font-size:.8rem; text-transform:upp
 .about-grid .big-num { font-family:'Bungee',sans-serif; font-size:3rem; color:var(--accent); line-height:1; }
 
 /* ─── VIEWERS ─── */
-#viewer-3d { width:100%; height:480px; background:transparent; }
+#viewer-3d { width:100%; height:250px; background:transparent; }
+#viewer-3d canvas {
+    display:block;
+}
 #viewer-esp32 { width:100%; height:360px; background:transparent; margin-top:1.5rem; }
 .hint { font-family:'JetBrains Mono',monospace; font-size:.7rem; color:var(--text-dark); margin-top:.5rem; text-transform:uppercase; letter-spacing:1px; }
 .hint-esp32 { font-family:'JetBrains Mono',monospace; font-size:.65rem; color:var(--proj-esp32-terminal); margin-top:.25rem; text-transform:uppercase; letter-spacing:1px; text-align:right; }

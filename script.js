@@ -1,20 +1,69 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { STLLoader } from 'three/addons/loaders/STLLoader.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 const style = getComputedStyle(document.documentElement);
 
-/* ════════════════════════════════════
-   SOROSAT — Assemble / Explode + Rotação + Zoom
-   ════════════════════════════════════ */
+/* ════════════════════════════════════════════════════════════════
+   HELPER — Cabo curvo (peça → ponto fixo central)
+   ════════════════════════════════════════════════════════════════ */
+class CaboCentral {
+  constructor(idxArray, idxPeca, localA, posCentral, cor = 0x88aaff, raio = 0.02, comprimento = 3.5) {
+    this.idxArray = idxArray;
+    this.idxPeca = idxPeca;
+    this.localA = new THREE.Vector3(...localA);
+    this.posCentral = posCentral;
+    this.comprimentoIdeal = comprimento;
+    this.raio = raio;
+
+    this.curva = new THREE.QuadraticBezierCurve3(
+      new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()
+    );
+
+    const mat = new THREE.MeshStandardMaterial({
+      color: cor, metalness: 0.1, roughness: 0.8,
+    });
+    this.mesh = new THREE.Mesh(new THREE.BufferGeometry(), mat);
+    this.mesh.castShadow = true;
+    this.mesh.receiveShadow = true;
+  }
+
+  update() {
+    const arr = this.idxArray === 'novasPecas' ? window.__novasPecas : window.__partes1;
+    if (!arr || !arr[this.idxPeca]) return;
+
+    const meshPeca = arr[this.idxPeca].mesh;
+    const worldA = this.localA.clone().applyQuaternion(meshPeca.quaternion).add(meshPeca.position);
+    const worldB = this.posCentral;
+
+    const dist = worldA.distanceTo(worldB);
+    if (dist < 0.001) return;
+
+    const folga = Math.max(0, this.comprimentoIdeal - dist);
+    const meio = worldA.clone().lerp(worldB, 0.5);
+    meio.y -= folga * 0.6;
+
+    this.curva.v0.copy(worldA);
+    this.curva.v1.copy(meio);
+    this.curva.v2.copy(worldB);
+
+    this.mesh.geometry.dispose();
+    this.mesh.geometry = new THREE.TubeGeometry(this.curva, 20, this.raio, 8, false);
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   SOROSAT — Montado / Explodido
+   ════════════════════════════════════════════════════════════════ */
 
 const partesSorosat = [
-  { file: 'te6.stl', assembled: [1,0,1], exploded: [2,0,1], assembledRot:[0,1.55,0], explodedRot:[0+1,2.55,0+1]},
-  { file: 'te5.stl', assembled: [0,-1.1,1], exploded: [0,-2,1], assembledRot:[1.58,0,0], explodedRot:[2.58,1,1] },
-  { file: 'te4.stl', assembled: [0,0,0], exploded: [0,0,-1], assembledRot:[0,0,0], explodedRot:[1,1,1] },
-  { file: 'te3.stl', assembled: [-1,0,1], exploded: [-2,0,1], assembledRot:[0,1.55,0], explodedRot:[1,2.55,1]},
-  { file: 'te2.stl', assembled: [0,0,2], exploded: [0,0,3], assembledRot:[0,0,0], explodedRot:[1,1,1] },
-  { file: 'te1.stl', assembled: [0,1,1], exploded: [0,2,1], assembledRot:[1.58,0,0], explodedRot:[2.58,1,1] },
+  { file: 'te6.stl', assembled: [1,0,1], exploded: [4,0,1], assembledRot:[0,1.55,0], explodedRot:[0+1,2.55,0+1]},
+  { file: 'te5.stl', assembled: [0,-1.1,1], exploded: [0,-4,1], assembledRot:[1.58,0,0], explodedRot:[2.58,1,1] },
+  { file: 'te4.stl', assembled: [0,0,0], exploded: [0,0,-3], assembledRot:[0,0,0], explodedRot:[1,1,1] },
+  { file: 'te3.stl', assembled: [-1,0,1], exploded: [-4,0,1], assembledRot:[0,1.55,0], explodedRot:[1,2.55,1]},
+  { file: 'te2.stl', assembled: [0,0,2], exploded: [0,0,5], assembledRot:[0,0,0], explodedRot:[1,1,1] },
+  { file: 'te1.stl', assembled: [0,1,1], exploded: [0,4,1], assembledRot:[1.58,0,0], explodedRot:[2.58,1,1] },
 ];
 
 const c1 = document.getElementById('viewer-3d');
@@ -49,11 +98,64 @@ const sp1 = new THREE.Mesh(
 );
 sp1.rotation.x = -Math.PI/2; sp1.position.y = -1.2; sp1.receiveShadow = true; s1.add(sp1);
 
+/* ── Variáveis globais ── */
 let partes1 = [], prog1 = 0, alvo1 = 0, explodido = false;
 let camInicio = null, camFim = null;
 let camAssembled = null, camExploded = null;
+let cabos = [];
+let esp32Model = null;
+let novasPecas = [];
 
-Promise.all(partesSorosat.map(({file, assembled, exploded, assembledRot, explodedRot}) =>
+window.__partes1 = partes1;
+window.__novasPecas = novasPecas;
+
+/* ── Posições do ESP32 ── */
+const posCentral = new THREE.Vector3();
+const posCentralAssembled = new THREE.Vector3();
+const posCentralExploded = new THREE.Vector3();
+
+/* ── Config das 2 novas peças ── */
+const configNovas = [
+  {
+    file: 'ultsensor.glb',
+    label: 'Sensor',
+    scale: 1.4,
+    assembled: [0,  -1.0, 0.3],
+    exploded:  [1.2,  -1.3, 0.5],
+    assembledRot: [0, 2, 3],
+    explodedRot: [0.3, 2.2, 3],
+  },
+  {
+    file: 'oled128x64i2c.glb',
+    label: 'OLED',
+    scale: 1.0,
+    assembled: [0.0, 0.4, 0.2],
+    exploded:  [-1.0, 2.0, 0.6],
+    assembledRot: [0, 0, 0],
+    explodedRot: [-0.2, -0.3, 2.1],
+  },
+];
+
+/* ── 8 cores para os 8 cabos ── */
+const coresCabos = [
+  0xff3333, 0xff6633, 0xff9933, 0xffcc33,
+  0x3333ff, 0x3366ff, 0x3399ff, 0x33ccff,
+];
+
+/* ── 4 pontos de ancoragem por peça ── */
+const pontosAncoragem = [
+  [ 0.25,  0.15,  0   ],
+  [-0.25,  0.15,  0   ],
+  [ 0,     0.3,   0.15],
+  [ 0,     0,     0.25],
+];
+
+/* ════════════════════════════════════════════════════════════════
+   CARREGAMENTO
+   ════════════════════════════════════════════════════════════════ */
+
+// 1) STLs do SOROSAT
+const loaderStl = Promise.all(partesSorosat.map(({file, assembled, exploded, assembledRot, explodedRot}) =>
   new Promise((resolve) => {
     new STLLoader().load(file, (g) => {
       g.computeVertexNormals(); g.center();
@@ -71,63 +173,166 @@ Promise.all(partesSorosat.map(({file, assembled, exploded, assembledRot, explode
       resolve({ mesh: m, assembledPos: new THREE.Vector3(...assembled), explodedPos: new THREE.Vector3(...exploded), assembledQuat: aQ, explodedQuat: eQ });
     }, undefined, () => resolve(null));
   })
-)).then((res) => {
-  partes1 = res.filter(r => r);
-  
+));
+
+// 2) ESP32 GLB
+const loaderEsp = new Promise((resolve) => {
+  new GLTFLoader().load('esp32.glb', (gltf) => {
+    const model = gltf.scene;
+    model.traverse((child) => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true; } });
+    const box = new THREE.Box3().setFromObject(model);
+    const size = box.getSize(new THREE.Vector3());
+    const max = Math.max(size.x, size.y, size.z);
+    if (max > 0) model.scale.setScalar(1.4 / max);
+    resolve(model);
+  }, undefined, () => resolve(null));
+});
+
+// 3) Novas peças (usa cfg.scale do configNovas)
+const loadersNovas = configNovas.map((cfg) =>
+  new Promise((resolve) => {
+    new GLTFLoader().load(cfg.file, (gltf) => {
+      const model = gltf.scene;
+      model.traverse((child) => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true; } });
+      const box = new THREE.Box3().setFromObject(model);
+      const size = box.getSize(new THREE.Vector3());
+      const max = Math.max(size.x, size.y, size.z);
+      if (max > 0) model.scale.setScalar(cfg.scale / max); // ← USA O scale DO CONFIG
+
+      resolve({
+        mesh: model,
+        label: cfg.label,
+      });
+    }, undefined, () => resolve(null));
+  })
+);
+
+Promise.all([loaderStl, loaderEsp, ...loadersNovas]).then(([resStl, resEsp, ...resNovas]) => {
+  // ── SOROSAT ──
+  partes1 = resStl.filter(r => r);
+  window.__partes1 = partes1;
+
   const center = new THREE.Vector3(0, 0, 0);
   partes1.forEach(({assembledPos}) => center.add(assembledPos));
   center.divideScalar(partes1.length);
-  
+
   partes1.forEach(({mesh}) => s1.add(mesh));
   orb1.target.copy(center);
-  
+
   const dist = 4 + partes1.length * 1.2;
   camAssembled = new THREE.Vector3(center.x, center.y + dist * 0.3, center.z + dist);
   camExploded = camAssembled.clone().multiplyScalar(1.6);
-  
   camInicio = camAssembled;
   camFim = camExploded;
-  
   cam1.position.copy(camAssembled);
   orb1.update();
+
+  // ── ESP32 ──
+  if (resEsp) {
+    esp32Model = resEsp;
+    esp32Model.position.copy(center);
+    esp32Model.position.y += 0.3;
+
+    posCentralAssembled.copy(esp32Model.position);
+    posCentralExploded.copy(esp32Model.position);
+    posCentralExploded.y += 0.6;
+    posCentralExploded.x += 0.2;
+    posCentral.copy(posCentralAssembled);
+
+    s1.add(esp32Model);
+    console.log('✅ ESP32 carregado');
+  }
+
+  // ── NOVAS PEÇAS ──
+  novasPecas = resNovas.filter(r => r);
+  window.__novasPecas = novasPecas;
+
+  novasPecas.forEach((p, idx) => {
+    const cfg = configNovas[idx];
+
+    p.assembledPos = new THREE.Vector3(
+      center.x + cfg.assembled[0],
+      center.y + 0.3 + cfg.assembled[1],
+      center.z + cfg.assembled[2]
+    );
+    p.explodedPos = new THREE.Vector3(
+      center.x + cfg.exploded[0],
+      center.y + 0.3 + cfg.exploded[1],
+      center.z + cfg.exploded[2]
+    );
+    p.assembledQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(...cfg.assembledRot));
+    p.explodedQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(...cfg.explodedRot));
+
+    p.mesh.position.copy(p.assembledPos);
+    p.mesh.quaternion.copy(p.assembledQuat);
+    s1.add(p.mesh);
+    console.log(`✅ ${p.label} → ${p.assembledPos.toArray().map(v=>v.toFixed(2))}`);
+  });
+
+  // ── CABOS ──
+  cabos = [];
+  for (let i = 0; i < 2; i++) {
+    for (let j = 0; j < 4; j++) {
+      cabos.push(new CaboCentral(
+        'novasPecas', i,
+        pontosAncoragem[j],
+        posCentral,
+        coresCabos[i * 4 + j],
+        0.02 + j * 0.004,
+        3.0 + j * 0.3
+      ));
+      s1.add(cabos[cabos.length - 1].mesh);
+    }
+  }
+  console.log(`✅ ${cabos.length} cabos criados`);
 });
 
+/* ─── TOGGLE ─── */
 document.getElementById('toggle-sorosat').addEventListener('click', () => {
   explodido = !explodido;
-  
   alvo1 = explodido ? 1 : 0;
   camInicio = cam1.position.clone();
   camFim = explodido ? camExploded : camAssembled;
-  
   document.getElementById('toggle-sorosat').textContent = explodido ? '🔧 MONTAR' : '🔧 EXPLODIR';
 });
 
+/* ─── ANIMAÇÃO ─── */
 function anim1() {
   requestAnimationFrame(anim1);
   prog1 += (alvo1 - prog1) * 0.05;
-  
+
   partes1.forEach(({mesh, assembledPos, explodedPos, assembledQuat, explodedQuat}) => {
     mesh.position.lerpVectors(assembledPos, explodedPos, prog1);
     mesh.quaternion.slerpQuaternions(assembledQuat, explodedQuat, prog1);
   });
-  
+
+  novasPecas.forEach(({mesh, assembledPos, explodedPos, assembledQuat, explodedQuat}) => {
+    mesh.position.lerpVectors(assembledPos, explodedPos, prog1);
+    mesh.quaternion.slerpQuaternions(assembledQuat, explodedQuat, prog1);
+  });
+
+  if (esp32Model) {
+    posCentral.lerpVectors(posCentralAssembled, posCentralExploded, prog1);
+    esp32Model.position.copy(posCentral);
+  }
+
+  cabos.forEach(c => c.update());
+
   if (camInicio && camFim && Math.abs(prog1 - alvo1) > 0.001) {
     const t = explodido ? prog1 : 1 - prog1;
     cam1.position.lerpVectors(camInicio, camFim, t);
   }
-  
+
   orb1.update(); r1.render(s1, cam1);
 }
 anim1();
 
 /* ════════════════════════════════════
-   ESP32 — Viewer simples
+   ESP32 — Viewer simples (opcional)
    ════════════════════════════════════ */
 
 const c2 = document.getElementById('viewer-esp32');
-
-if (c2) {  // ← só executa se o container existir no HTML
-
+if (c2) {
   const s2 = new THREE.Scene(); s2.background = null;
   const cam2 = new THREE.PerspectiveCamera(40, c2.clientWidth/c2.clientHeight, 0.1, 1000);
   cam2.position.set(4, 3, 6);
@@ -143,16 +348,12 @@ if (c2) {  // ← só executa se o container existir no HTML
   orb2.enableZoom = false; orb2.enablePan = false;
 
   s2.add(new THREE.AmbientLight(0xffffff, 0.6));
-
   const d2 = new THREE.DirectionalLight(0xffffff, 2);
   d2.position.set(5, 10, 5); d2.castShadow = true; s2.add(d2);
-
   const f2 = new THREE.DirectionalLight(0x4444ff, 0.3);
   f2.position.set(-4, 2, 4); s2.add(f2);
-
   const back2 = new THREE.DirectionalLight(0xffffff, 0.15);
   back2.position.set(0, 0, -5); s2.add(back2);
-
   const sp2 = new THREE.Mesh(
     new THREE.PlaneGeometry(6,6),
     new THREE.ShadowMaterial({ opacity: 0.08, color: 0x000000 })
@@ -168,13 +369,9 @@ if (c2) {  // ← só executa se o container existir no HTML
     const max = Math.max(s.x, s.y, s.z);
     if (max > 0) m.scale.setScalar(2.5 / max);
     s2.add(m);
-    console.log('✅ ESP32 carregado');
   }, undefined, (e) => console.error('Erro ESP32:', e));
 
-  function anim2() {
-    requestAnimationFrame(anim2);
-    orb2.update(); r2.render(s2, cam2);
-  }
+  function anim2() { requestAnimationFrame(anim2); orb2.update(); r2.render(s2, cam2); }
   anim2();
 }
 
@@ -183,7 +380,6 @@ window.addEventListener('resize', () => {
   const w1 = c1.clientWidth, h1 = c1.clientHeight;
   cam1.aspect = w1 / h1; cam1.updateProjectionMatrix();
   r1.setSize(w1, h1);
-
   if (c2) {
     const w2 = c2.clientWidth, h2 = c2.clientHeight;
     cam2.aspect = w2 / h2; cam2.updateProjectionMatrix();
