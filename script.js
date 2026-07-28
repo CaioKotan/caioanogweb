@@ -57,13 +57,13 @@ class CaboCentral {
    SOROSAT — Montado / Explodido
    ════════════════════════════════════════════════════════════════ */
 
-const partesSorosat = [
-  { file: 'te6.stl', assembled: [1,0,1], exploded: [4,0,1], assembledRot:[0,1.55,0], explodedRot:[0+1,2.55,0+1]},
-  { file: 'te5.stl', assembled: [0,-1.1,1], exploded: [0,-4,1], assembledRot:[1.58,0,0], explodedRot:[2.58,1,1] },
-  { file: 'te4.stl', assembled: [0,0,0], exploded: [0,0,-3], assembledRot:[0,0,0], explodedRot:[1,1,1] },
-  { file: 'te3.stl', assembled: [-1,0,1], exploded: [-4,0,1], assembledRot:[0,1.55,0], explodedRot:[1,2.55,1]},
-  { file: 'te2.stl', assembled: [0,0,2], exploded: [0,0,5], assembledRot:[0,0,0], explodedRot:[1,1,1] },
-  { file: 'te1.stl', assembled: [0,1,1], exploded: [0,4,1], assembledRot:[1.58,0,0], explodedRot:[2.58,1,1] },
+const partesSorosat = [ //rotação 90º = 3.15
+  { file: 'te6.glb', assembled: [1,0,1], exploded: [4,0,1], assembledRot:[1.575,3.15,1.575], explodedRot:[1,2.55,1]},
+  { file: 'te5.glb', assembled: [0,-1.1,1], exploded: [0,-4,1], assembledRot:[1.575,1.575,1.575], explodedRot:[2.58,1,1]},
+  { file: 'te4.glb', assembled: [0,0,0], exploded: [0,0,-3], assembledRot:[0,1.575,1.575], explodedRot:[1,1,1]},
+  { file: 'te3.glb', assembled: [-1,0,1], exploded: [-4,0,1], assembledRot:[1.575,3.15,1.575], explodedRot:[1,2.55,1]},
+  { file: 'te2.glb', assembled: [0,0,2], exploded: [0,0,5], assembledRot:[0,1.575,1.575], explodedRot:[1,1,1]},
+  { file: 'te1.glb', assembled: [0,1,1], exploded: [0,4,1], assembledRot:[1.575,1.575,1.575], explodedRot:[2.58,1,1]},
 ];
 
 const c1 = document.getElementById('viewer-3d');
@@ -155,25 +155,64 @@ const pontosAncoragem = [
    ════════════════════════════════════════════════════════════════ */
 
 // 1) STLs do SOROSAT
-const loaderStl = Promise.all(partesSorosat.map(({file, assembled, exploded, assembledRot, explodedRot}) =>
-  new Promise((resolve) => {
-    new STLLoader().load(file, (g) => {
-      g.computeVertexNormals(); g.center();
-      const cor = new THREE.Color(style.getPropertyValue('--model-color').trim());
-      const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: cor, metalness: 0.2, roughness: 0.5 }));
-      m.castShadow = true; m.receiveShadow = true;
-      const box = new THREE.Box3().setFromObject(m);
-      const s = box.getSize(new THREE.Vector3());
-      const max = Math.max(s.x, s.y, s.z);
-      if (max > 0) m.scale.setScalar(2.2 / max);
+const loaderStl = Promise.all(
+  partesSorosat.map(
+    ({ file, assembled, exploded, assembledRot, explodedRot }) =>
+      new Promise((resolve) => {
+        new GLTFLoader().load(
+          file,
+          (gltf) => {
+            const model = gltf.scene;
 
-      const aQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(...assembledRot));
-      const eQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(...explodedRot));
+            model.traverse((child) => {
+              if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
 
-      resolve({ mesh: m, assembledPos: new THREE.Vector3(...assembled), explodedPos: new THREE.Vector3(...exploded), assembledQuat: aQ, explodedQuat: eQ });
-    }, undefined, () => resolve(null));
-  })
-));
+                // Mantém a aparência semelhante ao STL
+                if (child.material) {
+                  child.material = child.material.clone();
+                  child.material.metalness = 0.2;
+                  child.material.roughness = 0.5;
+                }
+              }
+            });
+
+            // Centraliza
+            const box = new THREE.Box3().setFromObject(model);
+            const center = box.getCenter(new THREE.Vector3());
+            model.position.sub(center);
+
+            // Escala igual ao STL
+            const size = box.getSize(new THREE.Vector3());
+            const max = Math.max(size.x, size.y, size.z);
+
+            if (max > 0) {
+              model.scale.setScalar(2.2 / max);
+            }
+
+            const aQ = new THREE.Quaternion().setFromEuler(
+              new THREE.Euler(...assembledRot)
+            );
+
+            const eQ = new THREE.Quaternion().setFromEuler(
+              new THREE.Euler(...explodedRot)
+            );
+
+            resolve({
+              mesh: model,
+              assembledPos: new THREE.Vector3(...assembled),
+              explodedPos: new THREE.Vector3(...exploded),
+              assembledQuat: aQ,
+              explodedQuat: eQ,
+            });
+          },
+          undefined,
+          () => resolve(null)
+        );
+      })
+  )
+);
 
 // 2) ESP32 GLB
 const loaderEsp = new Promise((resolve) => {
