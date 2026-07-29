@@ -151,3 +151,6 @@ h1 .glitch { position:relative; display:inline-block; }
 .glitchy:hover .glitch::after { content:attr(data-text); position:absolute; left:3px; top:0; color:var(--glitch); clip-path:inset(0 0 60% 0); animation:glitch1 .3s infinite; pointer-events:none; }
 @keyframes glitch1 { 0%,100%{transform:translate(0)} 20%{transform:translate(-3px,2px)} 40%{transform:translate(3px,-1px)} 60%{transform:translate(-2px,3px)} 80%{transform:translate(2px,-2px)} }
 @media(max-width:640px){ body { padding-top:3rem; padding-bottom:3rem; } .wrap { padding:2rem 1.25rem; } .about-grid { grid-template-columns:1fr; gap:1.5rem; } .contato-links { gap:1.5rem; } .scrollbar { height:40px; } }
+#viewer-3d2 {
+  width:100%; height:250px; background:transparent;
+}
